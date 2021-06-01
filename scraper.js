@@ -1,6 +1,9 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
+const PDFDocument = require('pdfkit');
 const loginData = require('./login-data.json');
+const DirForWatchlistJPG = 'output_jpg/watchlist/';
+const DirForResult = 'result/';
 
 async function scrapeList(url) {
   try {
@@ -39,9 +42,9 @@ async function scrapeList(url) {
     const watchlistName = await page.$$eval('.symbol-EJ_LFrif', el => el.map((a) => a.dataset.symbolShort));
 
     // create folder to store screenshot
-    var dir = './chart';
+    var dir = './' + DirForWatchlistJPG;
     if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir);
+      fs.mkdirSync(dir, { recursive: true });
     }
 
     // view the first item of watchlist
@@ -51,18 +54,53 @@ async function scrapeList(url) {
     // take screenshot
     await page.waitForTimeout(1000);
     // adjusting screenshot position
-    await page.screenshot({ path: 'chart/' + watchlistName[0] + '.jpg', clip: {x: 56, y:40, width: 1024, height: 800} });
+    await page.screenshot({ path: DirForWatchlistJPG + watchlistName[0] + '.jpg', clip: {x: 56, y:40, width: 1540, height: 680} });
 
     // loop through the rest of watchlist
     for (var i = 1; i < watchlistLength; i++) {
       await page.keyboard.press('ArrowDown');
       await page.waitForTimeout(1000);
-      await page.screenshot({ path: 'chart/' + watchlistName[i] + '.jpg', clip: {x: 56, y:40, width: 1024, height: 800} });
+      await page.screenshot({ path: DirForWatchlistJPG + watchlistName[i] + '.jpg', clip: {x: 56, y:40, width: 1540, height: 680} });
     }
 
     await browser.close();
+
+    // create folder for result
+    var dir = './' + DirForResult;
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir);
+    }
+
+    // create PDF doc
+    const pageWidth = 1080;
+    const pageHeight = 2400;
+    const chartWidth = 1000;
+    const chartHeight = 442;
+    const marginX = 40;
+    const marginY = 126.4;
+    const textMargin = 40;
+    const doc = new PDFDocument({
+      size: [pageWidth, pageHeight]
+    });
+
+    // add chart to PDF
+    doc.fontSize(32);
+    for (var i = 0; i < watchlistLength; i++) {
+      if (i > 0 && i % 4 === 0) {
+        // add new page every 4 charts
+        doc.addPage({
+          size: [pageWidth, pageHeight]
+        });
+      }
+      doc
+        .image(DirForWatchlistJPG + watchlistName[i] + '.jpg', marginX, marginY * ((i % 4) + 1) + chartHeight * (i % 4), {width: chartWidth})
+        .text(watchlistName[i], marginX, marginY * ((i % 4) + 1) + chartHeight * (i % 4) - textMargin);
+    }
+
+    doc.end();
+    doc.pipe( fs.createWriteStream(DirForResult + 'watchlist.pdf') );
   } catch (err) {
-    console.log(err)
+    console.log(err);
   }
 }
 
