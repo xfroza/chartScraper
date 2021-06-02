@@ -8,6 +8,7 @@ const TimeForLoading = 1000;
 
 async function scrapeWatchlist(url) {
   try {
+    var startTime = new Date();
     const browser = await puppeteer.launch({ headless: true });
 
     // open page for sign in
@@ -134,8 +135,14 @@ async function scrapeWatchlist(url) {
 
     // close PDF doc
     doc.end();
+
+    // output PDF doc
     doc.pipe( fs.createWriteStream(DirForResult + 'watchlist.pdf') );
-    console.log('Watchlist PDF has been created successfully!')
+
+    // Caculate elapsed time
+    var endTime = new Date();
+    var elapsedTime = Math.round((endTime - startTime) / 1000);
+    console.log('Watchlist PDF has been created successfully! [elapsed time: ' + elapsedTime + ' seconds]')
   } catch (err) {
     console.log(err);
   }
