@@ -4,8 +4,9 @@ const PDFDocument = require('pdfkit');
 const loginData = require('./login-data.json');
 const DirForWatchlistJPG = 'output_jpg/watchlist/';
 const DirForResult = 'result/';
+const TimeForLoading = 1000;
 
-async function scrapeList(url) {
+async function scrapeWatchlist(url) {
   try {
     const browser = await puppeteer.launch({ headless: true });
 
@@ -27,19 +28,12 @@ async function scrapeList(url) {
     await page.type('input[name=username]', loginData.username);
     await page.type('input[name=password]', loginData.password);
     await page.click('button[type=submit]');
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(TimeForLoading);
 
     // click to open chart
+    await page.waitForSelector('.tv-mainmenu__item--chart');
     await page.click('.tv-mainmenu__item--chart');
-
-    // *open watchlist (only necessary when watchlist do not show up by default)
-    // await page.waitForSelector('[data-name="base"]');
-    // await page.$eval('[data-name="base"]', el => el.click());
-
-    // get watchlist info
-    await page.waitForSelector('.symbol-EJ_LFrif');
-    const watchlistLength = await page.$$eval('.symbol-EJ_LFrif', el => el.length);
-    const watchlistName = await page.$$eval('.symbol-EJ_LFrif', el => el.map((a) => a.dataset.symbolShort));
+    console.log('Successfully logged in...')
 
     // create folder to store screenshot
     var dir = './' + DirForWatchlistJPG;
@@ -47,23 +41,63 @@ async function scrapeList(url) {
       fs.mkdirSync(dir, { recursive: true });
     }
 
-    // view the first item of watchlist
+    // *open watchlist (only necessary when watchlist do not show up by default)
+    // await page.waitForSelector('[data-name="base"]');
+    // await page.$eval('[data-name="base"]', el => el.click());
+
+    // create an array to store the name of all items
+    var allItemName = [];
+
+    // scroll watchlist to the top
+    await page.waitForSelector('.symbol-EJ_LFrif');
+    await page.$eval('.listContainer-3U2Wf-wc', el => {
+      el.scrollTop = 0;
+    })
+
+    // select the 1st item of watchlist
+    await page.waitForTimeout(TimeForLoading);
     const firstItem = await page.$x('/html/body/div[2]/div[5]/div/div[1]/div[1]/div[1]/div[1]/div[2]/div/div[2]/div/div[2]/div/div[2]');
     await firstItem[0].click();
+    console.log('Start scraping watchlist...')
 
-    // take screenshot
-    await page.waitForTimeout(1000);
-    // adjusting screenshot position
-    await page.screenshot({ path: DirForWatchlistJPG + watchlistName[0] + '.jpg', clip: {x: 56, y:40, width: 1540, height: 680} });
+    // get name of the 1st item
+    await page.waitForSelector('.title-2ahQmZbQ');
+    const firstItemName = await page.$eval('.title-2ahQmZbQ', el => el.innerText);
+    allItemName.push(firstItemName);
+
+    // take screenshot of the 1st item
+    await page.waitForTimeout(TimeForLoading);
+    await page.screenshot({ path: DirForWatchlistJPG + firstItemName + '.jpg', clip: {x: 56, y:40, width: 1540, height: 680} });
+    console.log('[' + firstItemName + ']: Successful')
 
     // loop through the rest of watchlist
-    for (var i = 1; i < watchlistLength; i++) {
+    var itemName;
+    while (true) {
+      // press arrow down to get next item
       await page.keyboard.press('ArrowDown');
-      await page.waitForTimeout(1000);
-      await page.screenshot({ path: DirForWatchlistJPG + watchlistName[i] + '.jpg', clip: {x: 56, y:40, width: 1540, height: 680} });
+      // wait for selector for 3s, if doesn't exist, continue
+      try {
+        await page.waitForSelector('.daysCounter-2ahQmZbQ', {timeout: TimeForLoading});
+      } catch (err) {
+        // selector doesn't exist, continue...
+      }
+      // get name of current item
+      itemName = await page.$eval('.title-2ahQmZbQ', el => el.innerText);
+      // compare name of current item with name of the 1st item
+      if (itemName === firstItemName) {
+        // break loop if two name matches
+        break;
+      }
+      allItemName.push(itemName);
+      // take screenshot of current item
+      await page.waitForTimeout(TimeForLoading);
+      await page.screenshot({ path: DirForWatchlistJPG + itemName + '.jpg', clip: {x: 56, y:40, width: 1540, height: 680} });
+      console.log('[' + itemName + ']: Successful')
     }
+    console.log('Scraped ' + allItemName.length + ' items...')
 
     await browser.close();
+    console.log('Closed browser...')
 
     // create folder for result
     var dir = './' + DirForResult;
@@ -72,6 +106,7 @@ async function scrapeList(url) {
     }
 
     // create PDF doc
+    console.log('Start creating PDF doc...')
     const pageWidth = 1080;
     const pageHeight = 2400;
     const chartWidth = 1000;
@@ -85,7 +120,7 @@ async function scrapeList(url) {
 
     // add chart to PDF
     doc.fontSize(32);
-    for (var i = 0; i < watchlistLength; i++) {
+    for (var i = 0; i < allItemName.length; i++) {
       if (i > 0 && i % 4 === 0) {
         // add new page every 4 charts
         doc.addPage({
@@ -93,15 +128,17 @@ async function scrapeList(url) {
         });
       }
       doc
-        .image(DirForWatchlistJPG + watchlistName[i] + '.jpg', marginX, marginY * ((i % 4) + 1) + chartHeight * (i % 4), {width: chartWidth})
-        .text(watchlistName[i], marginX, marginY * ((i % 4) + 1) + chartHeight * (i % 4) - textMargin);
+        .image(DirForWatchlistJPG + allItemName[i] + '.jpg', marginX, marginY * ((i % 4) + 1) + chartHeight * (i % 4), {width: chartWidth})
+        .text(allItemName[i], marginX, marginY * ((i % 4) + 1) + chartHeight * (i % 4) - textMargin);
     }
 
+    // close PDF doc
     doc.end();
     doc.pipe( fs.createWriteStream(DirForResult + 'watchlist.pdf') );
+    console.log('Watchlist PDF has been created successfully!')
   } catch (err) {
     console.log(err);
   }
 }
 
-scrapeList('https://www.tradingview.com/')
+scrapeWatchlist('https://www.tradingview.com/')
