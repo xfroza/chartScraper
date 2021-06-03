@@ -22,3 +22,5 @@ node scraper.js 1
 node scraper.js 2
 node scraper.js 1 2
 ```
+
+### Output file will be stored in 'result' folder
