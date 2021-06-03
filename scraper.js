@@ -2,6 +2,7 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const PDFDocument = require('pdfkit');
 const loginData = require('./login-data.json');
+const URL = 'https://www.tradingview.com/';
 const DirForWatchlistJPG = 'output_jpg/watchlist/';
 const DirForResult = 'result/';
 const TimeForLoading = 1000;
@@ -145,10 +146,28 @@ async function scrapeWatchlist(url) {
     // Caculate elapsed time
     var endTime = new Date();
     var elapsedTime = Math.round((endTime - startTime) / 1000);
-    console.log('Watchlist PDF has been created successfully! [elapsed time: ' + elapsedTime + ' seconds]')
+    var elapsedTimeMin = Math.round(elapsedTime / 60);
+    var elapsedTimeSec = Math.round(elapsedTime % 60);
+    console.log('Watchlist PDF has been created successfully! [elapsed time: ' + elapsedTimeMin + ' m ' + elapsedTimeSec + ' s]')
   } catch (err) {
     console.log(err);
   }
 }
 
-scrapeWatchlist('https://www.tradingview.com/')
+async function scrapeScreener(url) {
+  console.log('scrapeScreener coming soon...')
+}
+
+if (process.argv.some(el => el === '1')) {
+  console.log('Prepare to scrape watchlist...')
+  scrapeWatchlist(URL)
+}
+
+if (process.argv.some(el => el === '2')) {
+  console.log('Prepare to scrape screener...')
+  scrapeScreener(URL)
+}
+
+if (!process.argv.some(el => el === '1' || el === '2')) {
+  console.log('Please select at least one option:\n1. watchlist\n2. screener')
+}

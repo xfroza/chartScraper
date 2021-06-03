@@ -13,7 +13,12 @@ npm install puppeteer
 npm install pdfkit
 ```
 
-### Compile
+### Compile (options: [1. watchlist, 2. screener])
 ```
-node scraper.js
+node scraper.js [options]
+
+Example:
+node scraper.js 1
+node scraper.js 2
+node scraper.js 1 2
 ```
