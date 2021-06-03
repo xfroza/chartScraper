@@ -71,6 +71,9 @@ async function scrapeWatchlist(url) {
     await page.screenshot({ path: DirForWatchlistJPG + firstItemName + '.jpg', clip: {x: 56, y:40, width: 1540, height: 680} });
     console.log('[' + firstItemName + ']: Successful')
 
+    // get close date
+    const closeDate = await page.$eval('.lastPriceTimeWithIcon-1wcMUg0D', el => el.innerText.substr(1, 6).replace(' ', '_'));
+
     // loop through the rest of watchlist
     var itemName;
     while (true) {
@@ -137,7 +140,7 @@ async function scrapeWatchlist(url) {
     doc.end();
 
     // output PDF doc
-    doc.pipe( fs.createWriteStream(DirForResult + 'watchlist.pdf') );
+    doc.pipe( fs.createWriteStream(DirForResult + closeDate + '_watchlist.pdf') );
 
     // Caculate elapsed time
     var endTime = new Date();
