@@ -4,6 +4,7 @@ const PDFDocument = require('pdfkit');
 const loginData = require('./login-data.json');
 const URL = 'https://www.tradingview.com/';
 const dirForWatchlistJPG = 'output_jpg/watchlist/';
+const dirForScreenerJPG = 'output_jpg/screener/';
 const dirForResult = 'result/';
 const timeForLoading = 1000;
 
@@ -46,11 +47,11 @@ function createPDF(imgName, imgDir, outputName) {
   console.log('>> ' + outputName + ' has been created successfully!');
 }
 
-function caculateElapsedTime(startTime, endTime, funcName) {
+function caculateElapsedTime(startTime, endTime, func) {
   var elapsedTime = Math.round((endTime - startTime) / 1000);
   var elapsedTimeMin = Math.round(elapsedTime / 60);
   var elapsedTimeSec = Math.round(elapsedTime % 60);
-  console.log('>> Elapsed time' + funcName + ': ' + elapsedTimeMin + ' m ' + elapsedTimeSec + ' s');
+  console.log('>> Elapsed time' + func + ': ' + elapsedTimeMin + ' m ' + elapsedTimeSec + ' s');
 }
 
 async function signIn(page) {
@@ -81,8 +82,15 @@ async function signIn(page) {
 }
 
 async function clickToOpenChart(page) {
-  await page.waitForSelector('.tv-mainmenu__item--chart');
-  await page.click('.tv-mainmenu__item--chart');
+  await page.waitForSelector('a[href="/chart/"]');
+  await page.$eval('a[href="/chart/"]', el => el.click());
+  console.log('>> Enter chart page...')
+}
+
+async function clickToOpenScreener(page) {
+  await page.waitForSelector('a[href="/screener/"]');
+  await page.$eval('a[href="/screener/"]', el => el.click());
+  console.log('>> Enter screener page...')
 }
 
 async function clickToOpenWatchlist(page) {
@@ -91,10 +99,42 @@ async function clickToOpenWatchlist(page) {
   await page.$eval('[data-name="base"]', el => el.click());
 }
 
+async function clickToOpenSearchBox(page) {
+  await page.waitForSelector('#header-toolbar-symbol-search');
+  await page.click('#header-toolbar-symbol-search');
+}
+
+async function searchItem(page, item) {
+  await page.waitForSelector('.input-3n5_2-hI');
+  await page.type('.input-3n5_2-hI', item);
+  await page.keyboard.press('Enter');
+}
+
 async function takeScreenshot(page, dir, fileName) {
   await page.waitForTimeout(timeForLoading);
   await page.screenshot({ path: dir + fileName + '.jpg', clip: {x: 56, y:40, width: 1540, height: 680} });
   console.log('>> [' + fileName + ']: Successful');
+}
+
+async function scrollTableToBottom(page) {
+  var currentTableHeight, newTableHeight;
+  await page.waitForSelector('.tv-data-table__row');
+  currentTableHeight = await page.$eval('.tv-screener__content-pane > table > tbody', el => el.offsetHeight);
+  console.log('>> Scrolling to the bottom...')
+  // loop until no more new content
+  while (currentTableHeight) {
+    await page.evaluate(distance => {
+      window.scrollBy(0, distance);
+    }, currentTableHeight);
+    await page.waitForTimeout(timeForLoading * 5);
+    newTableHeight = await page.$eval('.tv-screener__content-pane > table > tbody', el => el.offsetHeight);
+    if (newTableHeight === currentTableHeight) {
+      // break loop if no change on table height
+      console.log('>> Reached bottom...')
+      break;
+    }
+    currentTableHeight = newTableHeight;
+  }
 }
 
 async function scrapeWatchlist() {
@@ -112,8 +152,8 @@ async function scrapeWatchlist() {
     // create directory to store screenshot
     createDir(dirForWatchlistJPG);
 
-    // create an array to store the name of all items
-    var allItemName = [];
+    // create an array to store all items
+    var allItem = [];
 
     // scroll watchlist to the top
     await page.waitForSelector('.symbol-EJ_LFrif');
@@ -121,22 +161,22 @@ async function scrapeWatchlist() {
       el.scrollTop = 0;
     });
 
-    // select the 1st item of watchlist
+    // select the first item of watchlist
     await page.waitForTimeout(timeForLoading);
-    const firstItem = await page.$x('/html/body/div[2]/div[5]/div/div[1]/div[1]/div[1]/div[1]/div[2]/div/div[2]/div/div[2]/div/div[2]');
-    await firstItem[0].click();
+    const firstItemBox = await page.$x('/html/body/div[2]/div[5]/div/div[1]/div[1]/div[1]/div[1]/div[2]/div/div[2]/div/div[2]/div/div[2]');
+    await firstItemBox[0].click();
     console.log('>> Start scraping watchlist...')
 
-    // get name of the 1st item
+    // get the first item
     await page.waitForSelector('.title-2ahQmZbQ');
-    const firstItemName = await page.$eval('.title-2ahQmZbQ', el => el.innerText);
-    allItemName.push(firstItemName);
+    const firstItem = await page.$eval('.title-2ahQmZbQ', el => el.innerText);
+    allItem.push(firstItem);
 
     // take screenshot of the 1st item
-    await takeScreenshot(page, dirForWatchlistJPG, firstItemName);
+    await takeScreenshot(page, dirForWatchlistJPG, firstItem);
 
     // loop through the rest of watchlist
-    var itemName;
+    var item;
     while (true) {
       // press arrow down to get next item
       await page.keyboard.press('ArrowDown');
@@ -146,18 +186,18 @@ async function scrapeWatchlist() {
       } catch (err) {
         // selector doesn't exist, continue...
       }
-      // get name of current item
-      itemName = await page.$eval('.title-2ahQmZbQ', el => el.innerText);
-      // compare name of current item with name of the 1st item
-      if (itemName === firstItemName) {
-        // break loop if two name matches
+      // get current item
+      item = await page.$eval('.title-2ahQmZbQ', el => el.innerText);
+      // compare current item with the first item
+      if (item === firstItem) {
+        // break loop if two item matches
         break;
       }
-      allItemName.push(itemName);
+      allItem.push(item);
       // take screenshot of current item
-      await takeScreenshot(page, dirForWatchlistJPG, itemName);
+      await takeScreenshot(page, dirForWatchlistJPG, item);
     }
-    console.log('>> Scraped ' + allItemName.length + ' items...')
+    console.log('>> Scraped ' + allItem.length + ' items...')
 
     await browser.close();
     console.log('>> Closed browser...')
@@ -166,7 +206,7 @@ async function scrapeWatchlist() {
     createDir(dirForResult);
 
     // create PDF doc
-    createPDF(allItemName, dirForWatchlistJPG, 'watchlist.pdf');
+    createPDF(allItem, dirForWatchlistJPG, 'watchlist.pdf');
 
     // Caculate elapsed time
     var endTime = new Date();
@@ -179,6 +219,51 @@ async function scrapeWatchlist() {
 async function scrapeScreener() {
   try {
     var startTime = new Date();
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+
+    // sign in
+    await signIn(page);
+
+    // click to open screener
+    await clickToOpenScreener(page);
+
+    // scroll table to the bottom
+    await scrollTableToBottom(page);
+
+    // get filtering results
+    await page.waitForSelector('.tv-data-table__row');
+    const matchedItem = await page.$$eval('.tv-data-table__row', el => el.map((a) => a.dataset.symbol));
+    // get short symbol of matched item (exclude characters before ':')
+    const matchedItemShortSymbol = await page.$$eval('.tv-data-table__row', el => el.map((a) => a.dataset.symbol.slice(a.dataset.symbol.lastIndexOf(':') + 1)));
+    console.log('>> ' + matchedItem.length + ' matched items found...');
+
+    // create directory to store screenshot
+    createDir(dirForScreenerJPG);
+
+    // click to open chart
+    await clickToOpenChart(page);
+
+    // take screenshot of all matched items
+    for (var i = 0; i < matchedItem.length; i++) {
+      // click to open search box
+      await clickToOpenSearchBox(page);
+      // search item
+      await searchItem(page, matchedItem[i]);
+      // take screenshot of current item
+      await takeScreenshot(page, dirForScreenerJPG, matchedItemShortSymbol[i]);
+    }
+    console.log('>> Scraped ' + matchedItem.length + ' items...')
+
+    await browser.close();
+    console.log('>> Closed browser...')
+
+    // create directory for result
+    createDir(dirForResult);
+
+    // create PDF doc
+    createPDF(matchedItemShortSymbol, dirForScreenerJPG, 'screener.pdf');
+
     // Caculate elapsed time
     var endTime = new Date();
     caculateElapsedTime(startTime, endTime, ' for scraping screener');
