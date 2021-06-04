@@ -206,7 +206,7 @@ async function scrapeWatchlist() {
     createDir(dirForResult);
 
     // create PDF doc
-    createPDF(allItem, dirForWatchlistJPG, 'watchlist.pdf');
+    createPDF(allItem, dirForWatchlistJPG, (new Date()).toISOString().slice(0,10).replace(/-/g,"") + '_watchlist.pdf');
 
     // Caculate elapsed time
     var endTime = new Date();
@@ -262,7 +262,7 @@ async function scrapeScreener() {
     createDir(dirForResult);
 
     // create PDF doc
-    createPDF(matchedItemShortSymbol, dirForScreenerJPG, 'screener.pdf');
+    createPDF(matchedItemShortSymbol, dirForScreenerJPG, (new Date()).toISOString().slice(0,10).replace(/-/g,"") + '_screener.pdf');
 
     // Caculate elapsed time
     var endTime = new Date();
