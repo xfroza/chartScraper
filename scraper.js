@@ -113,7 +113,6 @@ async function searchItem(page, item) {
 async function takeScreenshot(page, dir, fileName) {
   await page.waitForTimeout(timeForLoading);
   await page.screenshot({ path: dir + fileName + '.jpg', clip: {x: 56, y:40, width: 1540, height: 680} });
-  console.log('>> [' + fileName + ']: Successful');
 }
 
 async function scrollTableToBottom(page) {
@@ -174,6 +173,7 @@ async function scrapeWatchlist() {
 
     // take screenshot of the 1st item
     await takeScreenshot(page, dirForWatchlistJPG, firstItem);
+    console.log('>> [' + firstItem + ']: Successful');
 
     // loop through the rest of watchlist
     var item;
@@ -196,6 +196,7 @@ async function scrapeWatchlist() {
       allItem.push(item);
       // take screenshot of current item
       await takeScreenshot(page, dirForWatchlistJPG, item);
+      console.log('>> [' + item + ']: Successful');
     }
     console.log('>> Scraped ' + allItem.length + ' items...')
 
@@ -245,6 +246,7 @@ async function scrapeScreener() {
     await clickToOpenChart(page);
 
     // take screenshot of all matched items
+    console.log('>> Start scraping filtering results...')
     for (var i = 0; i < matchedItem.length; i++) {
       // click to open search box
       await clickToOpenSearchBox(page);
@@ -252,6 +254,7 @@ async function scrapeScreener() {
       await searchItem(page, matchedItem[i]);
       // take screenshot of current item
       await takeScreenshot(page, dirForScreenerJPG, matchedItemShortSymbol[i]);
+      console.log('>> (' + i + '/' + matchedItem.length + ') [' + matchedItemShortSymbol[i] + ']: Successful');
     }
     console.log('>> Scraped ' + matchedItem.length + ' items...')
 
