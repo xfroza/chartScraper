@@ -176,7 +176,7 @@ async function scrapeWatchlist() {
     console.log('>> [' + firstItem + ']: Successful');
 
     // loop through the rest of watchlist
-    var item;
+    var currentItem, previousItem;
     while (true) {
       // press arrow down to get next item
       await page.keyboard.press('ArrowDown');
@@ -187,16 +187,21 @@ async function scrapeWatchlist() {
         // selector doesn't exist, continue...
       }
       // get current item
-      item = await page.$eval('.title-2ahQmZbQ', el => el.innerText);
-      // compare current item with the first item
-      if (item === firstItem) {
-        // break loop if two item matches
+      currentItem = await page.$eval('.title-2ahQmZbQ', el => el.innerText);
+      // exit if current item matches previous item (error occurred)
+      if (currentItem === previousItem) {
+        console.log('>> ERROR: Failed to get the next item!')
+        process.exit();
+      }
+      // break loop if current item matches the first item (finish looping watchlist)
+      if (currentItem === firstItem) {
         break;
       }
-      allItem.push(item);
+      allItem.push(currentItem);
       // take screenshot of current item
-      await takeScreenshot(page, dirForWatchlistJPG, item);
-      console.log('>> [' + item + ']: Successful');
+      await takeScreenshot(page, dirForWatchlistJPG, currentItem);
+      console.log('>> [' + currentItem + ']: Successful');
+      previousItem = currentItem;
     }
     console.log('>> Scraped ' + allItem.length + ' items...')
 
@@ -275,16 +280,20 @@ async function scrapeScreener() {
   }
 }
 
-if (process.argv.some(el => el === '1')) {
-  console.log('>> Prepare to scrape watchlist...')
-  scrapeWatchlist()
+async function main() {
+  if (process.argv.some(el => el === '1')) {
+    console.log('>> Prepare to scrape watchlist...')
+    await scrapeWatchlist();
+  }
+
+  if (process.argv.some(el => el === '2')) {
+    console.log('>> Prepare to scrape screener...')
+    await scrapeScreener();
+  }
+
+  if (!process.argv.some(el => el === '1' || el === '2')) {
+    console.log('>> Please select at least one option:\n>> 1. watchlist\n>> 2. screener')
+  }
 }
 
-if (process.argv.some(el => el === '2')) {
-  console.log('>> Prepare to scrape screener...')
-  scrapeScreener()
-}
-
-if (!process.argv.some(el => el === '1' || el === '2')) {
-  console.log('>> Please select at least one option:\n>> 1. watchlist\n>> 2. screener')
-}
+main();
