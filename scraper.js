@@ -15,7 +15,7 @@ function createDir(dir) {
 }
 
 function createPDF(imgName, imgDir, outputName) {
-  console.log('>> Start creating PDF doc...')
+  console.log('>> Start creating PDF doc...');
   const pageWidth = 1080;
   const pageHeight = 2400;
   const chartWidth = 1000;
@@ -47,6 +47,18 @@ function createPDF(imgName, imgDir, outputName) {
   console.log('>> ' + outputName + ' has been created successfully!');
 }
 
+function createJSON(item, name) {
+  const writerStream = fs.createWriteStream(name + '.json');
+  writerStream.write(JSON.stringify(item, null, 2));
+  writerStream.end();
+  writerStream.on('finish', function() {
+    console.log('>> ' + name + '.json has been created successfully!');
+  });
+  writerStream.on('error', function(err) {
+    console.log(err.stack);
+  });
+}
+
 function caculateElapsedTime(startTime, endTime, func) {
   var elapsedTime = Math.round((endTime - startTime) / 1000);
   var elapsedTimeMin = Math.round(elapsedTime / 60);
@@ -75,22 +87,22 @@ async function signIn(page) {
   try {
     await page.waitForSelector('[data-name="base"]', {timeout: timeForLoading * 5});
   } catch (err) {
-    console.log('>> ERROR: Failed to login!')
+    console.log('>> ERROR: Failed to login!');
     process.exit();
   }
-  console.log('>> Successfully logged in...')
+  console.log('>> Successfully logged in...');
 }
 
 async function clickToOpenChart(page) {
   await page.waitForSelector('a[href="/chart/"]');
   await page.$eval('a[href="/chart/"]', el => el.click());
-  console.log('>> Enter chart page...')
+  console.log('>> Enter chart page...');
 }
 
 async function clickToOpenScreener(page) {
   await page.waitForSelector('a[href="/screener/"]');
   await page.$eval('a[href="/screener/"]', el => el.click());
-  console.log('>> Enter screener page...')
+  console.log('>> Enter screener page...');
 }
 
 async function clickToOpenWatchlist(page) {
@@ -119,7 +131,7 @@ async function scrollTableToBottom(page) {
   var currentTableHeight, newTableHeight;
   await page.waitForSelector('.tv-data-table__row');
   currentTableHeight = await page.$eval('.tv-screener__content-pane > table > tbody', el => el.offsetHeight);
-  console.log('>> Scrolling to the bottom...')
+  console.log('>> Scrolling to the bottom...');
   // loop until no more new content
   while (currentTableHeight) {
     await page.evaluate(distance => {
@@ -129,7 +141,7 @@ async function scrollTableToBottom(page) {
     newTableHeight = await page.$eval('.tv-screener__content-pane > table > tbody', el => el.offsetHeight);
     if (newTableHeight === currentTableHeight) {
       // break loop if no change on table height
-      console.log('>> Reached bottom...')
+      console.log('>> Reached bottom...');
       break;
     }
     currentTableHeight = newTableHeight;
@@ -164,7 +176,7 @@ async function scrapeWatchlist() {
     await page.waitForTimeout(timeForLoading);
     const firstItemBox = await page.$x('/html/body/div[2]/div[5]/div/div[1]/div[1]/div[1]/div[1]/div[2]/div/div[2]/div/div[2]/div/div[2]');
     await firstItemBox[0].click();
-    console.log('>> Start scraping watchlist...')
+    console.log('>> Start scraping watchlist...');
 
     // get the first item
     await page.waitForSelector('.title-2ahQmZbQ');
@@ -190,7 +202,7 @@ async function scrapeWatchlist() {
       currentItem = await page.$eval('.title-2ahQmZbQ', el => el.innerText);
       // exit if current item matches previous item (error occurred)
       if (currentItem === previousItem) {
-        console.log('>> ERROR: Failed to get the next item!')
+        console.log('>> ERROR: Failed to get the next item!');
         process.exit();
       }
       // break loop if current item matches the first item (finish looping watchlist)
@@ -203,10 +215,13 @@ async function scrapeWatchlist() {
       console.log('>> [' + currentItem + ']: Successful');
       previousItem = currentItem;
     }
-    console.log('>> Scraped ' + allItem.length + ' items...')
+    console.log('>> Scraped ' + allItem.length + ' items...');
 
     await browser.close();
-    console.log('>> Closed browser...')
+    console.log('>> Closed browser...');
+
+    // create JSON file
+    createJSON(allItem, 'watchlist');
 
     // create directory for result
     createDir(dirForResult);
@@ -251,7 +266,7 @@ async function scrapeScreener() {
     await clickToOpenChart(page);
 
     // take screenshot of all matched items
-    console.log('>> Start scraping filtering results...')
+    console.log('>> Start scraping filtering results...');
     for (var i = 0; i < matchedItem.length; i++) {
       // click to open search box
       await clickToOpenSearchBox(page);
@@ -261,10 +276,13 @@ async function scrapeScreener() {
       await takeScreenshot(page, dirForScreenerJPG, matchedItemShortSymbol[i]);
       console.log('>> (' + i + '/' + matchedItem.length + ') [' + matchedItemShortSymbol[i] + ']: Successful');
     }
-    console.log('>> Scraped ' + matchedItem.length + ' items...')
+    console.log('>> Scraped ' + matchedItem.length + ' items...');
 
     await browser.close();
-    console.log('>> Closed browser...')
+    console.log('>> Closed browser...');
+
+    // create JSON file
+    createJSON(matchedItemShortSymbol, 'screener');
 
     // create directory for result
     createDir(dirForResult);
@@ -282,17 +300,17 @@ async function scrapeScreener() {
 
 async function main() {
   if (process.argv.some(el => el === '1')) {
-    console.log('>> Prepare to scrape watchlist...')
+    console.log('>> Prepare to scrape watchlist...');
     await scrapeWatchlist();
   }
 
   if (process.argv.some(el => el === '2')) {
-    console.log('>> Prepare to scrape screener...')
+    console.log('>> Prepare to scrape screener...');
     await scrapeScreener();
   }
 
   if (!process.argv.some(el => el === '1' || el === '2')) {
-    console.log('>> Please select at least one option:\n>> 1. watchlist\n>> 2. screener')
+    console.log('>> Please select at least one option:\n>> 1. watchlist\n>> 2. screener');
   }
 }
 
