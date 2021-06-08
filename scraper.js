@@ -51,9 +51,6 @@ function createJSON(item, name) {
   const writerStream = fs.createWriteStream(name + '.json');
   writerStream.write(JSON.stringify(item, null, 2));
   writerStream.end();
-  writerStream.on('finish', function() {
-    console.log('>> ' + name + '.json has been created successfully!');
-  });
   writerStream.on('error', function(err) {
     console.log(err.stack);
   });
