@@ -2,6 +2,7 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const PDFDocument = require('pdfkit');
 const loginData = require('./login-data.json');
+const watchlistData = require('./watchlist-data.json');
 const URL = 'https://www.tradingview.com/';
 const dirForWatchlistJPG = 'output_jpg/watchlist/';
 const dirForScreenerJPG = 'output_jpg/screener/';
@@ -124,6 +125,24 @@ async function takeScreenshot(page, dir, fileName) {
   await page.screenshot({ path: dir + fileName + '.jpg', clip: {x: 56, y:40, width: 1540, height: 680} });
 }
 
+async function takeMultipleScreenshotBySearching(page, items, dir) {
+  // click to open chart
+  await clickToOpenChart(page);
+
+  // take screenshot of all items
+  console.log('>> Start scraping charts...');
+  for (var i = 0; i < items.length; i++) {
+    // click to open search box
+    await clickToOpenSearchBox(page);
+    // search item
+    await searchItem(page, items[i]);
+    // take screenshot of current item
+    await takeScreenshot(page, dir, items[i]);
+    console.log('>> (' + ( i + 1 ) + '/' + items.length + ') [' + items[i] + ']: Successful');
+  }
+  console.log('>> Scraped ' + items.length + ' items...');
+}
+
 async function scrollTableToBottom(page) {
   var currentTableHeight, newTableHeight;
   await page.waitForSelector('.tv-data-table__row');
@@ -145,7 +164,7 @@ async function scrollTableToBottom(page) {
   }
 }
 
-async function scrapeWatchlist() {
+async function scrapeWatchlistInTradingview() {
   try {
     var startTime = new Date();
     const browser = await puppeteer.launch({ headless: true });
@@ -217,9 +236,6 @@ async function scrapeWatchlist() {
     await browser.close();
     console.log('>> Closed browser...');
 
-    // create JSON file
-    createJSON(allItem, 'watchlist');
-
     // create directory for result
     createDir(dirForResult);
 
@@ -234,7 +250,7 @@ async function scrapeWatchlist() {
   }
 }
 
-async function scrapeScreener() {
+async function scrapeScreenerInTradingview() {
   try {
     var startTime = new Date();
     const browser = await puppeteer.launch({ headless: true });
@@ -251,41 +267,23 @@ async function scrapeScreener() {
 
     // get filtering results
     await page.waitForSelector('.tv-data-table__row');
-    const matchedItem = await page.$$eval('.tv-data-table__row', el => el.map((a) => a.dataset.symbol));
     // get short symbol of matched item (exclude characters before ':')
-    const matchedItemShortSymbol = await page.$$eval('.tv-data-table__row', el => el.map((a) => a.dataset.symbol.slice(a.dataset.symbol.lastIndexOf(':') + 1)));
-    console.log('>> ' + matchedItem.length + ' matched items found...');
+    const matchedItems = await page.$$eval('.tv-data-table__row', el => el.map((a) => a.dataset.symbol.slice(a.dataset.symbol.lastIndexOf(':') + 1)));
+    console.log('>> ' + matchedItems.length + ' matched items found...');
 
     // create directory to store screenshot
     createDir(dirForScreenerJPG);
 
-    // click to open chart
-    await clickToOpenChart(page);
-
-    // take screenshot of all matched items
-    console.log('>> Start scraping filtering results...');
-    for (var i = 0; i < matchedItem.length; i++) {
-      // click to open search box
-      await clickToOpenSearchBox(page);
-      // search item
-      await searchItem(page, matchedItem[i]);
-      // take screenshot of current item
-      await takeScreenshot(page, dirForScreenerJPG, matchedItemShortSymbol[i]);
-      console.log('>> (' + i + '/' + matchedItem.length + ') [' + matchedItemShortSymbol[i] + ']: Successful');
-    }
-    console.log('>> Scraped ' + matchedItem.length + ' items...');
+    await takeMultipleScreenshotBySearching(page, matchedItems, dirForScreenerJPG);
 
     await browser.close();
     console.log('>> Closed browser...');
-
-    // create JSON file
-    createJSON(matchedItemShortSymbol, 'screener');
 
     // create directory for result
     createDir(dirForResult);
 
     // create PDF doc
-    createPDF(matchedItemShortSymbol, dirForScreenerJPG, (new Date()).toISOString().slice(0,10).replace(/-/g,"") + '_screener.pdf');
+    createPDF(matchedItems, dirForScreenerJPG, (new Date()).toISOString().slice(0,10).replace(/-/g,"") + '_screener.pdf');
 
     // Caculate elapsed time
     var endTime = new Date();
@@ -295,19 +293,55 @@ async function scrapeScreener() {
   }
 }
 
+async function scrapeWatchlistInFutu() {
+  try {
+    var startTime = new Date();
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+
+    // sign in
+    await signIn(page);
+
+    // create directory to store screenshot
+    createDir(dirForWatchlistJPG);
+
+    await takeMultipleScreenshotBySearching(page, watchlistData, dirForWatchlistJPG);
+
+    await browser.close();
+    console.log('>> Closed browser...');
+
+    // create directory for result
+    createDir(dirForResult);
+
+    // create PDF doc
+    createPDF(watchlistData, dirForWatchlistJPG, (new Date()).toISOString().slice(0,10).replace(/-/g,"") + '_watchlist.pdf');
+
+    // Caculate elapsed time
+    var endTime = new Date();
+    caculateElapsedTime(startTime, endTime, ' for scraping watchlist');
+  } catch (err) {
+    console.log(err);
+  }
+}
+
 async function main() {
   if (process.argv.some(el => el === '1')) {
-    console.log('>> Prepare to scrape watchlist...');
-    await scrapeWatchlist();
+    console.log('>> Prepare to scrape watchlist in Tradingview...');
+    await scrapeWatchlistInTradingview();
   }
 
   if (process.argv.some(el => el === '2')) {
-    console.log('>> Prepare to scrape screener...');
-    await scrapeScreener();
+    console.log('>> Prepare to scrape screener in Tradingview...');
+    await scrapeScreenerInTradingview();
   }
 
-  if (!process.argv.some(el => el === '1' || el === '2')) {
-    console.log('>> Please select at least one option:\n>> 1. watchlist\n>> 2. screener');
+  if (process.argv.some(el => el === '3')) {
+    console.log('>> Prepare to scrape watchlist in FUTU...');
+    await scrapeWatchlistInFutu();
+  }
+
+  if (!process.argv.some(el => el === '1' || el === '2' || el === '3')) {
+    console.log('>> Please select at least one option:\n>> 1. Get watchlist from Tradingview and take screenshots\n>> 2. Get filtering results from Tradingview and take screenshots\n>> 3. Get watchlist from FUTU and take screenshots');
   }
 }
 

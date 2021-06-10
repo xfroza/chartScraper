@@ -3,6 +3,7 @@
 
 # But not these files...
 !.gitignore
-!login-data.json
 !README.md
+!login-data.json
 !scraper.js
+!get_watchlist.py
