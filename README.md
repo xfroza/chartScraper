@@ -30,7 +30,7 @@ Option 2: Get filtering results from Tradingview and take screenshots
 node scraper.js 2
 
 Option 3: Get watchlist from FUTU and take screenshots
-venv\Scripts\python get_watchlist.py
+venv\Scripts\python get_list.py [list_name]
 node scraper.js 3
 ```
 

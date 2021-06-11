@@ -1,9 +1,8 @@
-# Ignore everything
-*
-
-# But not these files...
-!.gitignore
-!README.md
-!login-data.json
-!scraper.js
-!get_watchlist.py
+.idea
+node_modules
+output_jpg
+result
+venv
+list-data.json
+package.json
+package-lock.json

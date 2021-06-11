@@ -2,7 +2,7 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const PDFDocument = require('pdfkit');
 const loginData = require('./login-data.json');
-const watchlistData = require('./watchlist-data.json');
+const listData = require('./list-data.json');
 const URL = 'https://www.tradingview.com/';
 const dirForWatchlistJPG = 'output_jpg/watchlist/';
 const dirForScreenerJPG = 'output_jpg/screener/';
@@ -305,7 +305,7 @@ async function scrapeWatchlistInFutu() {
     // create directory to store screenshot
     createDir(dirForWatchlistJPG);
 
-    await takeMultipleScreenshotBySearching(page, watchlistData, dirForWatchlistJPG);
+    await takeMultipleScreenshotBySearching(page, listData, dirForWatchlistJPG);
 
     await browser.close();
     console.log('>> Closed browser...');
@@ -314,7 +314,7 @@ async function scrapeWatchlistInFutu() {
     createDir(dirForResult);
 
     // create PDF doc
-    createPDF(watchlistData, dirForWatchlistJPG, (new Date()).toISOString().slice(0,10).replace(/-/g,"") + '_watchlist.pdf');
+    createPDF(listData, dirForWatchlistJPG, (new Date()).toISOString().slice(0,10).replace(/-/g,"") + '_watchlist.pdf');
 
     // Caculate elapsed time
     var endTime = new Date();
