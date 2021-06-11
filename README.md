@@ -21,7 +21,7 @@ Step 1: Install and login FutuOpenD
 Step 2: Install Futu API library (cmd: pip install futu-api)
 ```
 
-### Compile
+### Run
 ```
 Option 1: Get watchlist from Tradingview and take screenshots
 node scraper.js 1
