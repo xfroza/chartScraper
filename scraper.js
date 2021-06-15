@@ -64,13 +64,19 @@ function caculateElapsedTime(startTime, endTime, func) {
   console.log('>> Elapsed time' + func + ': ' + elapsedTimeMin + ' m ' + elapsedTimeSec + ' s');
 }
 
-async function signIn(page) {
+async function signInTradingview(page) {
   await page.setViewport({width: 1920, height: 800});
   await page.goto(URL, { waitUntil: 'networkidle0' });
 
-  // click sign in button
-  await page.waitForSelector('.tv-header__dropdown-text > a');
-  await page.click('.tv-header__dropdown-text > a');
+  // click sign in button (version 1)
+  // await page.waitForSelector('.tv-header__dropdown-text > a');
+  // await page.click('.tv-header__dropdown-text > a');
+
+  // click sign in button (version 2)
+  await page.waitForSelector('.js-header-user-menu-button-anonymous');
+  await page.click('.js-header-user-menu-button-anonymous');
+  await page.waitForSelector('[data-name="header-user-menu-sign-in"]');
+  await page.click('[data-name="header-user-menu-sign-in"]');
 
   // click via email
   await page.waitForSelector('.i-clearfix');
@@ -171,7 +177,7 @@ async function scrapeWatchlistInTradingview() {
     const page = await browser.newPage();
 
     // sign in
-    await signIn(page);
+    await signInTradingview(page);
 
     // click to open chart
     await clickToOpenChart(page);
@@ -257,7 +263,7 @@ async function scrapeScreenerInTradingview() {
     const page = await browser.newPage();
 
     // sign in
-    await signIn(page);
+    await signInTradingview(page);
 
     // click to open screener
     await clickToOpenScreener(page);
@@ -300,7 +306,7 @@ async function scrapeWatchlistInFutu() {
     const page = await browser.newPage();
 
     // sign in
-    await signIn(page);
+    await signInTradingview(page);
 
     // create directory to store screenshot
     createDir(dirForWatchlistJPG);
