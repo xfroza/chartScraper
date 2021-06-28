@@ -73,8 +73,14 @@ async function signInTradingview(page) {
   // await page.click('.tv-header__dropdown-text > a');
 
   // click sign in button (version 2)
-  await page.waitForSelector('.js-header-user-menu-button-anonymous');
-  await page.click('.js-header-user-menu-button-anonymous');
+  // await page.waitForSelector('.js-header-user-menu-button-anonymous');
+  // await page.click('.js-header-user-menu-button-anonymous');
+  // await page.waitForSelector('[data-name="header-user-menu-sign-in"]');
+  // await page.click('[data-name="header-user-menu-sign-in"]');
+
+  // click sign in button (version 3)
+  await page.waitForSelector('.tv-header__user-menu-button--anonymous');
+  await page.click('.tv-header__user-menu-button--anonymous');
   await page.waitForSelector('[data-name="header-user-menu-sign-in"]');
   await page.click('[data-name="header-user-menu-sign-in"]');
 
