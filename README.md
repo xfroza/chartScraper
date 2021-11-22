@@ -17,8 +17,11 @@ npm install pdfkit
 
 ### Setup (FUTU)
 ```
-Step 1: Install and login FutuOpenD
-Step 2: Install Futu API library (cmd: pip install futu-api)
+(Install and login FutuOpenD)
+
+Step 1: pip install virtualenv
+Step 2: python -m venv venv
+Step 3: venv/scripts/python.exe -m pip install futu-api
 ```
 
 ### Run
