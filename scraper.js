@@ -127,8 +127,8 @@ async function clickToOpenSearchBox(page) {
 }
 
 async function searchItem(page, item) {
-  await page.waitForSelector('.input-3n5_2-hI');
-  await page.type('.input-3n5_2-hI', item);
+  await page.waitForSelector('.input-CcsqUMct');
+  await page.type('.input-CcsqUMct', item);
   await page.keyboard.press('Enter');
 }
 
