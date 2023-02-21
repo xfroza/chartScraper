@@ -104,21 +104,22 @@ async function signInTradingview(page) {
 }
 
 async function clickToOpenChart(page) {
+  console.log('>> Enter chart page...');
   await page.waitForSelector('a[href="/chart/"]');
   await page.$eval('a[href="/chart/"]', el => el.click());
-  console.log('>> Enter chart page...');
 }
 
 async function clickToOpenScreener(page) {
+  console.log('>> Enter screener page...');
   await page.waitForSelector('a[href="/screener/"]');
   await page.$eval('a[href="/screener/"]', el => el.click());
-  console.log('>> Enter screener page...');
 }
 
 async function clickToOpenWatchlist(page) {
-  // only necessary when watchlist do not show up by default
-  await page.waitForSelector('[data-name="base"]');
-  await page.$eval('[data-name="base"]', el => el.click());
+  console.log('>> Open watchlist...');
+  await page.waitForXPath('/html/body/div[2]/div[6]/div/div[2]/div/div/div/div/div[1]');
+  const watchListButtonTmp = await page.$x('/html/body/div[2]/div[6]/div/div[2]/div/div/div/div/div[1]');
+  await watchListButtonTmp[0].click();
 }
 
 async function clickToOpenSearchBox(page) {
@@ -127,14 +128,14 @@ async function clickToOpenSearchBox(page) {
 }
 
 async function searchItem(page, item) {
-  await page.waitForSelector('.input-CcsqUMct');
-  await page.type('.input-CcsqUMct', item);
+  await page.waitForSelector('.input-nVh4c_cg');
+  await page.type('.input-nVh4c_cg', item);
   await page.keyboard.press('Enter');
 }
 
 async function takeScreenshot(page, dir, fileName) {
   await page.waitForTimeout(timeForLoading);
-  await page.screenshot({ path: dir + fileName + '.jpg', clip: {x: 56, y:40, width: 1540, height: 680} });
+  await page.screenshot({ path: dir + fileName + '.jpg', clip: {x: 56, y:40, width: 1820, height: 680} });
 }
 
 async function takeMultipleScreenshotBySearching(page, items, dir) {
@@ -194,21 +195,42 @@ async function scrapeWatchlistInTradingview() {
     // create an array to store all items
     var allItem = [];
 
+    // check whether watchlist is opened
+    console.log('>> Wait for selector (watchlist)...');
+    await page.waitForTimeout(timeForLoading * 5);
+    const watchlistExists = await page.$eval('.listContainer-zol_jClG', () => true).catch(() => false)
+    if (!watchlistExists) {
+      // open watchlist if watchlist is not found
+      await clickToOpenWatchlist(page);
+    } else {
+      console.log('>> Watchlist is opened...');
+    }
+
     // scroll watchlist to the top
-    await page.waitForSelector('.symbol-EJ_LFrif');
-    await page.$eval('.listContainer-3U2Wf-wc', el => {
+    console.log('>> Scroll watchlist to the top...');
+    await page.waitForSelector('.listContainer-zol_jClG');
+    await page.$eval('.listContainer-zol_jClG', el => {
       el.scrollTop = 0;
     });
 
     // select the first item of watchlist
+    console.log('>> Wait for selector (select the first item of watchlist)...');
     await page.waitForTimeout(timeForLoading);
-    const firstItemBox = await page.$x('/html/body/div[2]/div[5]/div/div[1]/div[1]/div[1]/div[1]/div[2]/div/div[2]/div/div[2]/div/div[2]');
+    const firstItemBox = await page.$x('/html/body/div[2]/div[6]/div/div[1]/div[1]/div[1]/div[1]/div[2]/div/div[2]/div/div/div[2]/div/div[2]');
     await firstItemBox[0].click();
+
+    // close watchlist on menu
+    console.log('>> Close watchlist on menu...');
+    const watchListButton = await page.$x('/html/body/div[2]/div[6]/div/div[2]/div/div/div/div/div[1]');
+    await watchListButton[0].click();
+
     console.log('>> Start scraping watchlist...');
 
     // get the first item
-    await page.waitForSelector('.title-2ahQmZbQ');
-    const firstItem = await page.$eval('.title-2ahQmZbQ', el => el.innerText);
+    console.log('>> Wait for selector (get the first item)...');
+    await page.waitForXPath('//*[@id="header-toolbar-symbol-search"]/div');
+    const [firstItemXPath] = await page.$x('//*[@id="header-toolbar-symbol-search"]/div');
+    const firstItem = await page.evaluate(name => name.innerText, firstItemXPath);
     allItem.push(firstItem);
 
     // take screenshot of the 1st item
@@ -216,18 +238,14 @@ async function scrapeWatchlistInTradingview() {
     console.log('>> [' + firstItem + ']: Successful');
 
     // loop through the rest of watchlist
-    var currentItem, previousItem;
+    var currentItem, currentItemXPath, previousItem;
     while (true) {
       // press arrow down to get next item
       await page.keyboard.press('ArrowDown');
-      // wait for selector for timeForLoading, if doesn't exist, continue
-      try {
-        await page.waitForSelector('.daysCounter-2ahQmZbQ', {timeout: timeForLoading});
-      } catch (err) {
-        // selector doesn't exist, continue...
-      }
       // get current item
-      currentItem = await page.$eval('.title-2ahQmZbQ', el => el.innerText);
+      await page.waitForXPath('//*[@id="header-toolbar-symbol-search"]/div');
+      const [currentItemXPath] = await page.$x('//*[@id="header-toolbar-symbol-search"]/div');
+      currentItem = await page.evaluate(name => name.innerText, currentItemXPath);
       // exit if current item matches previous item (error occurred)
       if (currentItem === previousItem) {
         console.log('>> ERROR: Failed to get the next item!');
@@ -285,6 +303,9 @@ async function scrapeScreenerInTradingview() {
 
     // create directory to store screenshot
     createDir(dirForScreenerJPG);
+
+    // go to previous page
+    await page.goBack();
 
     await takeMultipleScreenshotBySearching(page, matchedItems, dirForScreenerJPG);
 
