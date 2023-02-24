@@ -38,3 +38,8 @@ node scraper.js 3
 ```
 
 ### Output file will be stored in 'result' folder
+
+### Git push using GitHub token on the command line
+```
+git push https://<GITHUB_ACCESS_TOKEN>@github.com/xfroza/chartScraper.git
+```
